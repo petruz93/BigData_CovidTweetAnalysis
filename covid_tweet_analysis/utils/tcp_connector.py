@@ -2,7 +2,7 @@ import socket
 
 class TCPConnector:
 
-    def connect_to_socket(self, tcp_ip = "localhost", tcp_port: int = 9009):
+    def connect_to_socket(self, tcp_ip: str = "localhost", tcp_port: int = 9009):
         conn = None 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((tcp_ip, tcp_port))

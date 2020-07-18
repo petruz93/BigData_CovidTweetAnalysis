@@ -11,7 +11,7 @@ class TwitterAuthenticator:
         # [2] Bearer Token
         # [3] Access Token
         # [4] Access Token Secret
-        AUTH_FILE = os.path.join(ROOT_PATH, 'auth.tsv')
+        AUTH_FILE = os.path.join(ROOT_PATH, 'covid_tweet_analysis/twitter_api_client/auth.tsv')
 
         # Reads Twitter authentication factors from the first row of the file
         with open(AUTH_FILE, "r", encoding="utf-8") as af:

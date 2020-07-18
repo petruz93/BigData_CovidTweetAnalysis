@@ -10,7 +10,7 @@ import sys
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
 
-from twitter_authenticator import TwitterAuthenticator
+from .twitter_authenticator import TwitterAuthenticator
 from covid_tweet_analysis.utils.tcp_connector import TCPConnector
 
 twttrauth = TwitterAuthenticator()
@@ -98,18 +98,19 @@ def stream_connect(auth):
     #     if response_line:
     #         streamed_data = json.loads(response_line)
     #         pprint(streamed_data)
+    print(response.status_code)
     return response
 
 def send_tweets_to_spark(http_resp, tcp_connection):
     for line in http_resp.iter_lines():
         try:
             full_tweet = json.loads(line)
-            tweet_text = full_tweet['text']
+            tweet_text = str(full_tweet['text'].encode("utf-8"))
             print("Tweet Text: " + tweet_text)
             print("-------------------------------------------")
-            tcp.connection.send(tweet_text + '\n')
+            tcp_connection.send(bytes(tweet_text + '\n', 'utf-8'))
         except:
-            e = sys.exc_info()[0]
+            e = sys.exc_info()#[0]
             print("Error %s", e)
 
 bearer_token = BearerTokenAuth(consumer_key, consumer_secret)
@@ -126,7 +127,8 @@ setup_rules(bearer_token)
 
 # Connect to socket
 resp = stream_connect(bearer_token)
-send_tweets_to_spark(resp, TCPConnector.connect_to_socket("localhost", 9009))
+tcp_conn = TCPConnector()
+send_tweets_to_spark(resp, tcp_conn.connect_to_socket("localhost", 9009))
 
 
 # Listen to the stream.
