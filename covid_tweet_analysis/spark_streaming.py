@@ -25,24 +25,6 @@ dataStream = ssc.socketTextStream("localhost",9009)
 
 
 # TRANSFORMATION LOGIC
-# split each tweet into words
-words = dataStream.flatMap(lambda line: line.split(" "))
-
-# filter the words to get only hashtags, then map each hashtag to be a pair of (hashtag,1)
-hashtags = words.filter(lambda w: '#' in w).map(lambda x: (x, 1))
-
-# adding the count of each hashtag to its last count
-tags_totals = hashtags.updateStateByKey(aggregate_tags_count)
-
-# do processing for each RDD generated in each interval
-tags_totals.foreachRDD(process_rdd)
-
-# start the streaming computation
-ssc.start()
-
-# wait for the streaming to finish
-ssc.awaitTermination()
-
 # Sums all the new_values for each hashtag and add them to the total_sum across 
 # all the batches then saves the data into a tag_totals RDD
 def aggregate_tags_count(new_values, total_sum):
@@ -53,6 +35,7 @@ def get_sql_context_instance(spark_context):
     if ('sqlContextSingletonInstance' not in globals()):
         globals()['sqlContextSingletonInstance'] = SQLContext(spark_context)
     return globals()['sqlContextSingletonInstance']
+
 
 def process_rdd(time, rdd):
     print("----------- %s -----------" % str(time))
@@ -84,3 +67,25 @@ def send_df_to_dashboard(df):
     url = 'http://localhost:5001/updateData'
     request_data = {'label': str(top_tags), 'data': str(tags_count)}
     response = requests.post(url, data=request_data)
+
+
+# def save_tweets_into_hdfs(path)
+
+
+# split each tweet into words
+words = dataStream.flatMap(lambda line: line.split(" "))
+
+# filter the words to get only hashtags, then map each hashtag to be a pair of (hashtag,1)
+hashtags = words.filter(lambda w: '#' in w).map(lambda x: (x, 1))
+
+# adding the count of each hashtag to its last count
+tags_totals = hashtags.updateStateByKey(aggregate_tags_count)
+
+# do processing for each RDD generated in each interval
+tags_totals.foreachRDD(process_rdd)
+
+# start the streaming computation
+ssc.start()
+
+# wait for the streaming to finish
+ssc.awaitTermination()

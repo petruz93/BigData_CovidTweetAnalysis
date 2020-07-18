@@ -11,9 +11,10 @@ import requests
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from twitter_authenticator import TwitterAuthenticator
+from covid_tweet_analysis.utils.tcp_connector import TCPConnector
 
 twttrauth = TwitterAuthenticator()
-
+    
 consumer_key = twttrauth.consumer_key # Add your API key here
 consumer_secret = twttrauth.consumer_secret  # Add your API secret key here
 
@@ -21,7 +22,7 @@ stream_url = "https://api.twitter.com/labs/1/tweets/stream/filter"
 rules_url = "https://api.twitter.com/labs/1/tweets/stream/filter/rules"
 
 sample_rules = [
-    { 'value': '#covid19 happy lang:en', 'tag': 'covid pictures' },
+    { 'value': '#covid19 angry lang:en', 'tag': 'covid' },
 ]
 
 # Gets a bearer token
@@ -122,6 +123,12 @@ def setup_rules(auth):
 # Comment this line if you already setup rules and want to keep them
 setup_rules(bearer_token)
 
+
+# Connect to socket
+resp = stream_connect(bearer_token)
+send_tweets_to_spark(resp, TCPConnector.connect_to_socket("localhost", 9009))
+
+
 # Listen to the stream.
 # This reconnection logic will attempt to reconnect when a disconnection is detected.
 # To avoid rate limites, this logic implements exponential backoff, so the wait time
@@ -132,15 +139,3 @@ while True:
     time.sleep(2 ** timeout)
     timeout += 1
 
-# TCP connection to SparkStreaming
-TCP_IP = "localhost"
-TPC_PORT = 9009
-conn = None 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((TPC_IP, TCP_PORT))
-s.listen(1)
-print("Waiting for TCP connection...")
-conn, addr = s.accept()
-print("Connected... Starting getting tweets.")
-resp = stream_connect(bearer_token)
-send_tweets_to_spark(resp, conn)
