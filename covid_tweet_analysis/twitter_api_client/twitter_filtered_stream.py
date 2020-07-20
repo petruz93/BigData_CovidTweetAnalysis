@@ -22,7 +22,7 @@ stream_url = "https://api.twitter.com/labs/1/tweets/stream/filter"
 rules_url = "https://api.twitter.com/labs/1/tweets/stream/filter/rules"
 
 sample_rules = [
-    { 'value': '#covid19 angry lang:en', 'tag': 'covid' },
+    { 'value': '#covid19 lang:en', 'tag': 'covid' },
 ]
 
 # Gets a bearer token
@@ -103,15 +103,17 @@ def stream_connect(auth):
 
 def send_tweets_to_spark(http_resp, tcp_connection):
     for line in http_resp.iter_lines():
-        try:
-            full_tweet = json.loads(line)
-            tweet_text = str(full_tweet['text'].encode("utf-8"))
-            print("Tweet Text: " + tweet_text)
-            print("-------------------------------------------")
-            tcp_connection.send(bytes(tweet_text + '\n', 'utf-8'))
-        except:
-            e = sys.exc_info()#[0]
-            print("Error %s", e)
+        if(line):
+            pprint(json.loads(line))
+            try:
+                full_tweet = json.loads(line)
+                tweet_text = full_tweet['data']['text']
+                print("Tweet Text: " + tweet_text)
+                print("-------------------------------------------")
+                tcp_connection.send(bytes(tweet_text + '\n', 'utf-8'))
+            except:
+                e = sys.exc_info()#[0]
+                print("Error %s", e)
 
 bearer_token = BearerTokenAuth(consumer_key, consumer_secret)
 
