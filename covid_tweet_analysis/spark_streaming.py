@@ -5,17 +5,27 @@ import sys
 import requests
 from pprint import pprint
 
+
 # CONTEXT DEFINITION
 # create spark configuration
 spark = SparkSession.builder\
     .appName("TwitterStreamAppCovid")\
     .master("local[2]")\
+    .config("spark.cassandra.connection.host", "172.18.0.2")\
+    .config("spark.sql.extentions", "com.datastax.spark.connector.CassandraSparkExtensions")\
+    .config("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.0.0-beta")\
+    .config("spark.sql.catalog.mycatalog", "com.datastax.spark.connector.datasource.CassandraCatalog")\
     .getOrCreate() 
-
+    
 sc = spark.sparkContext
 
+
+# create cassandra Keyspace and Column-families
+spark.sql("CREATE DATABASE IF NOT EXISTS mycatalog.covidstream WITH DBPROPERTIES (class='SimpleStrategy', replication_factor='1')")
+spark.sql("CREATE TABLE IF NOT EXISTS mycatalog.covidstream.hashtags (hashtag STRING, hashtag_count Int) USING cassandra PARTITIONED BY (hashtag)")
+
 # create the Streaming Context from the above spark context with the specified interval size seconds
-ssc = StreamingContext(sc, 5)
+ssc = StreamingContext(sc, 10)
 sc.setLogLevel("ERROR")
 
 # setting a checkpoint to allow RDD recovery
@@ -23,6 +33,8 @@ ssc.checkpoint("checkpoint_TwitterApp")
 
 # read data from port 9009
 dataStream = ssc.socketTextStream("localhost", 9009)
+
+# initialize Cassandra "hashtag" table
 
 
 # Sets the session as a global variable
@@ -56,18 +68,25 @@ def process_rdd(time, rdd):
         hashtags_df.createOrReplaceTempView("hashtags")
         # get the top 10 hashtags from the table using SQL and print them
         hashtag_counts_df = session.sql("select hashtag, hashtag_count from hashtags order by hashtag_count desc limit 10")
-        hashtag_counts_df.show()
+        if(hashtag_counts_df.count()>0):
+            hashtag_counts_df.write\
+                .format("org.apache.spark.sql.cassandra")\
+                .mode("append")\
+                .options(table="hashtags", keyspace="covidstream")\
+                .save()
+            hashtag_counts_df.show()
+            # send_df_to_database(hashtag_counts_df, session)
     except:
         e = sys.exc_info()[0]
         print("Error: %s" % e)
 
 
-def send_df_to_database(df):
-    spark.write\
-        .format("org.apache.spark.sql.cassandra")\
-        .mode('append')\
-        .options(table="kv", keyspace="test")\
-        .save().show()
+# def send_df_to_database(df, session):
+    # session.write\
+    #     .format("org.apache.spark.sql.cassandra")\
+    #     .mode('append')\
+    #     .options(table="hashtags", keyspace="covidstream")\
+    #     .save().show()  
 
 
 # split each tweet into words
