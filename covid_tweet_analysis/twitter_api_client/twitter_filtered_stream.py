@@ -22,7 +22,10 @@ stream_url = "https://api.twitter.com/labs/1/tweets/stream/filter"
 rules_url = "https://api.twitter.com/labs/1/tweets/stream/filter/rules"
 
 sample_rules = [
-    { 'value': '#covid19 lang:en', 'tag': 'covid' },
+    { 'value': '(covid19 OR COVID19 OR COVID-19 OR covid-19 OR coronavirus OR CORONAVIRUS OR Covid-19) -is:retweet lang:en', 'tag': 'coronavirus' },
+    { 'value': '(covid19 OR COVID19 OR COVID-19 OR covid-19 OR coronavirus OR CORONAVIRUS OR Covid-19) -is:retweet lang:en', 'tag': 'COVID-19' },
+    { 'value': '(covid19 OR COVID19 OR COVID-19 OR covid-19 OR coronavirus OR CORONAVIRUS OR Covid-19) -is:retweet lang:en', 'tag': 'Covid-19' },
+    { 'value': '(covid19 OR COVID19 OR COVID-19 OR covid-19 OR coronavirus OR CORONAVIRUS OR Covid-19) -is:retweet lang:en', 'tag': 'covid19' },
 ]
 
 # Gets a bearer token
