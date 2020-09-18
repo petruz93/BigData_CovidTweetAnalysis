@@ -11,7 +11,7 @@ import requests
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from .twitter_authenticator import TwitterAuthenticator
-from covid_tweet_analysis.utils.tcp_connector import TCPConnector
+from covid_tweet_analysis.utils.connectors import TCPConnector
 
 twttrauth = TwitterAuthenticator()
     

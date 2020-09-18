@@ -1,9 +1,11 @@
 from pyspark import SparkConf, SparkContext
 from pyspark.streaming import StreamingContext
-from pyspark.sql import Row, SQLContext, SparkSession
+from pyspark.sql import Row, SQLContext, SparkSession, DataFrame
 import sys
 import requests
 from pprint import pprint
+
+from .utils.connectors import CassandraConnector as cassandra
 
 
 # CONTEXT DEFINITION
@@ -69,13 +71,8 @@ def process_rdd(time, rdd):
         # get the top 10 hashtags from the table using SQL and print them
         hashtag_counts_df = session.sql("select hashtag, hashtag_count from hashtags order by hashtag_count desc limit 10")
         if(hashtag_counts_df.count()>0):
-            hashtag_counts_df.write\
-                .format("org.apache.spark.sql.cassandra")\
-                .mode("append")\
-                .options(table="hashtags", keyspace="covidstream")\
-                .save()
-            hashtag_counts_df.show()
-            # send_df_to_database(hashtag_counts_df, session)
+            cassandra.write(hashtag_counts_df,"hashtags", "covidstream", True)
+        # send_df_to_database(hashtag_counts_df, session)
     except:
         e = sys.exc_info()[0]
         print("Error: %s" % e)
