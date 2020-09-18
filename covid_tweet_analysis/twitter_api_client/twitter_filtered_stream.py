@@ -37,6 +37,7 @@ class BearerTokenAuth(AuthBase):
         self.consumer_secret = consumer_secret
         self.bearer_token = self.get_bearer_token()
 
+
     def get_bearer_token(self):
         response = requests.post(
         self.bearer_token_url, 
@@ -49,6 +50,7 @@ class BearerTokenAuth(AuthBase):
 
         body = response.json()
         return body['access_token']
+
 
     def __call__(self, r):
         r.headers['Authorization'] = f"Bearer %s" % self.bearer_token
@@ -82,6 +84,7 @@ def delete_all_rules(rules, auth):
     if response.status_code is not 200:
         raise Exception(f"Cannot delete rules (HTTP %d): %s" % (response.status_code, response.text))
 
+
 def set_rules(rules, auth):
     if rules is None:
         return
@@ -95,6 +98,7 @@ def set_rules(rules, auth):
     if response.status_code is not 201:
         raise Exception(f"Cannot create rules (HTTP %d): %s" % (response.status_code, response.text))
 
+
 def stream_connect(auth):
     response = requests.get(stream_url, auth=auth, stream=True)
     # for response_line in response.iter_lines():
@@ -103,6 +107,7 @@ def stream_connect(auth):
     #         pprint(streamed_data)
     print(response.status_code)
     return response
+
 
 def send_tweets_to_spark(http_resp, tcp_connection):
     for line in http_resp.iter_lines():
@@ -119,6 +124,7 @@ def send_tweets_to_spark(http_resp, tcp_connection):
                 print("Error %s", e)
 
 bearer_token = BearerTokenAuth(consumer_key, consumer_secret)
+
 
 def setup_rules(auth):
     current_rules = get_all_rules(auth)
