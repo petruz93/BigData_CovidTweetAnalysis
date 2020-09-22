@@ -4,12 +4,14 @@ import requests
 from pprint import pprint
 from requests.auth import AuthBase
 
-from covid_tweet_analysis.twitter_api_client.twitter_authenticator import TwitterAuthenticator
+from covid_tweet_analysis.config.read_config import getConfigValue
 
 
-twttrAuth = TwitterAuthenticator()
-consumer_key = twttrAuth.consumer_key  # Add your API key here
-consumer_secret = twttrAuth.consumer_secret  # Add your API secret key here
+# twttrAuth = TwitterAuthenticator()
+# consumer_key = twttrAuth.consumer_key  # Add your API key here
+# consumer_secret = twttrAuth.consumer_secret  # Add your API secret key here
+consumer_key = getConfigValue('twitter', 'consumerKey')
+consumer_secret = getConfigValue('twitter', 'consumerSecret')
 
 request_url = "https://api.twitter.com/labs/2/tweets"
 # params = {"ids": "1138505981460193280"} #, "tweet.fields": "created_at"}
@@ -59,3 +61,10 @@ def get_tweets(params, auth=None):
     #         pprint(json.loads(response_line))
     # return result
 
+
+def stream_connect(stream_url, auth=bearer_token()):
+    print('dentro connect')
+    response = requests.get(stream_url, auth=auth, stream=True)
+    print(response.status_code)
+    print('dopo la richiesta')
+    return response#.json()
