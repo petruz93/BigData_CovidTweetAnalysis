@@ -1,4 +1,5 @@
 auth.tsv
+config.cfg
 data
 __pycache__
 
