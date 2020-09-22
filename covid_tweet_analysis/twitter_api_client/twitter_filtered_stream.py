@@ -10,7 +10,7 @@ import sys
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
 
-from .twitter_authenticator import TwitterAuthenticator
+from covid_tweet_analysis.twitter_api_client.twitter_authenticator import TwitterAuthenticator
 from covid_tweet_analysis.utils.connectors import TCPConnector
 
 twttrauth = TwitterAuthenticator()
