@@ -18,7 +18,7 @@ from covid_tweet_analysis.twitter import twitter_api_client
 class TweetProducer:
 
     def __init__(self, address: str, port: int, topic: str, rules=None):
-        self.producer = KafkaProducer(bootstrap_servers=address+':'+str(port))
+        self.producer = KafkaProducer(bootstrap_servers=f'{address}:{port}')
         self.topic = topic
         self.tweet_rules = [
             { 'value': '(covid19 OR COVID19 OR COVID-19 OR covid-19 OR coronavirus OR CORONAVIRUS OR Covid-19) -is:retweet lang:en', 'tag': 'coronavirus' },
@@ -30,8 +30,8 @@ class TweetProducer:
         
         if rules is not None:
             twitter_api_client.setup_rules(rules, self.bearer_token)
-        # else:
-        #     self.setup_rules(self.sample_rules, self.bearer_token)
+        else:
+            twitter_api_client.setup_rules(self.tweet_rules, self.bearer_token)
 
 
     def pushMessage(self, message):
@@ -48,5 +48,7 @@ class TweetProducer:
 
 
 if __name__ == "__main__":
+    print('init producer...')
     publisher = TweetProducer('localhost', 9092, 'covid19')
+    print('producer started.')
     publisher.startPublish()
