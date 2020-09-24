@@ -5,21 +5,36 @@ from pyspark.sql import Row, SQLContext, SparkSession
 import sys
 import requests
 from pprint import pprint
+import argparse
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import explode
 from pyspark.sql.functions import split
 
-from spark_streaming_connector import SparkStreamingConnector
-from spark_stream_jobs import TwitterSparkStreamJob
+from covid_tweet_analysis.utils.connectors import CassandraConnector as cassandra
+from covid_tweet_analysis.utils.connectors import SparkStreamingConnector
 
+parser = argparse.ArgumentParser()
+# cassandra = CassandraConnector()
+
+ALL_SOURCE_NAMES=["kafka", "socket"]
+
+parser.add_argument('--source',
+                    choices=ALL_SOURCE_NAMES,
+                    help="Possible data sources {}".format(ALL_SOURCE_NAMES),
+                    required=False
+)
+
+args = parser.parse_args()
+
+#172.18.0.2
 sparkConf = SparkConf()\
         .setAppName("TwitterStreamAppCovid")\
         .setMaster("local[12]")\
-        .setAll([("spark.cassandra.connection.host", "172.18.0.2"),\
+        .setAll([("spark.cassandra.connection.host", "127.0.0.1"),\
             ("spark.sql.extentions", "com.datastax.spark.connector.CassandraSparkExtensions"),\
             ("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.0.0-beta"),\
-            ("spark.sql.catalog.mycatalog", "com.datastax.spark.connector.datasource.CassandraCatalog")\
+            ("spark.sql.catalog.mycatalog", "com.datastax.spark.connector.datasource.CassandraCatalog"),\
         ])
 
 spark = SparkSession.builder\
@@ -28,39 +43,64 @@ spark = SparkSession.builder\
 
 sc = spark.sparkContext
 
-# Create DataFrame representing the stream of input lines from connection to localhost:9009
-lines = spark \
-    .readStream \
-    .format("socket") \
-    .option("host", "localhost") \
-    .option("port", 9009) \
-    .load()
+# create cassandra Keyspace and Column-families
+spark.sql("CREATE DATABASE IF NOT EXISTS mycatalog.covidstream WITH DBPROPERTIES (class='SimpleStrategy', replication_factor='1')")
+spark.sql("CREATE TABLE IF NOT EXISTS mycatalog.covidstream.hashtags (hashtag STRING, count BIGINT) USING cassandra PARTITIONED BY (hashtag)")
 
+# # Create DataFrame representing the stream of input lines from connection to localhost:9009
+# lines = spark \
+#     .readStream \
+#     .format("socket") \
+#     .option("host", "localhost") \
+#     .option("port", 9009) \
+#     .load()
+
+# Create DataFrame representing the stream of input lines from Kafka to localhost:9009
+
+def readStream(source:str):
+    if(source == 'kafka'):
+        lines = spark \
+            .readStream \
+            .format("kafka") \
+            .option("kafka.bootstrap.servers", "localhost:9092") \
+            .option("subscribe", "covid19") \
+            .load()
+    else:
+        lines = spark \
+            .readStream \
+            .format("socket") \
+            .option("host", "localhost") \
+            .option("port", 9009) \
+            .load()
+    return lines
+
+lines = readStream(args.source)
 
 # Split the lines into words
-words = lines.select(
-   explode(
-       split(lines.value, " ")
+query = lines.select(
+   explode(split(lines.value, " ")
    ).alias("hashtag"))
 
-pprint(words)
-
-#.filter(lambda w: w and w=='#')   
+# .filter(lambda w: w and w=='#')   
 
 # Generate running word count
-wordCounts = words.groupBy("hashtag").count()    
+word_count = query.groupBy("hashtag").count()    
+
+pprint(word_count)
 
 # # Generate running word count
 # wordCounts = words.groupBy("word").count()
 
-# Start running the query that prints the running counts to the console
-query = wordCounts \
-    .writeStream \
-    .outputMode("complete") \
-    .format("console") \
-    .start()
+# # Start running the query that prints the running counts to the console
+# query = wordCounts \
+#     .writeStream \
+#     .outputMode("complete") \
+#     .format("console") \
+#     .start()
 
-query.awaitTermination()
+cassandra.write_df_stream(word_count, "hashtags", "covidstream", True)
+
+# query.awaitTermination()
 
 # # create the Streaming Context from the above spark context with the specified interval size seconds
 # ssc = StreamingContext(sc, 5)
@@ -71,9 +111,6 @@ query.awaitTermination()
 # # setting a checkpoint to allow RDD recovery
 # ssc.checkpoint("checkpoint_TwitterApp")    
 
-#  # create cassandra Keyspace and Column-families
-# spark.sql("CREATE DATABASE IF NOT EXISTS mycatalog.covidstream WITH DBPROPERTIES (class='SimpleStrategy', replication_factor='1')")
-# spark.sql("CREATE TABLE IF NOT EXISTS mycatalog.covidstream.hashtags (hashtag STRING, hashtag_count Int) USING cassandra PARTITIONED BY (hashtag)")
 
 # # inizialize connector
 # spark_conn = SparkStreamingConnector()

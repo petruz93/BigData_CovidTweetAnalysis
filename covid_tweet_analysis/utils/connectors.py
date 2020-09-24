@@ -1,5 +1,6 @@
 import socket
 from pyspark.sql import DataFrame
+from pyspark.streaming import StreamingContext
 
 class TCPConnector:
 
@@ -18,8 +19,9 @@ class CassandraConnector:
     def __init__(self):
         self.cassandra_package_name = "org.apache.spark.sql.cassandra"
 
+
     @staticmethod
-    def write(data:DataFrame, table_name:str, keyspace_name:str, show=False):
+    def write_df(data:DataFrame, table_name:str, keyspace_name:str, show=False):
         """Writes @data into the CassandraDB with said table and keyspace names"""
         data.write\
             .format("org.apache.spark.sql.cassandra")\
@@ -29,3 +31,25 @@ class CassandraConnector:
         if (show is True):
             data.show()
 
+
+    @staticmethod
+    def write_df_stream(data:DataFrame, table_name:str, keyspace_name:str, show=False):
+        """Writes streaming @data into the CassandraDB with said table and keyspace names"""
+        data.writeStream\
+            .format("org.apache.spark.sql.cassandra")\
+            .option("confirm.truncate", True)\
+            .options(table=table_name,\
+                keyspace=keyspace_name,\
+                checkpointLocation="/tmp/spark_streaming/twitter_api_streaming/word_count")\
+            .outputMode("complete")\
+            .start()\
+            .awaitTermination()
+        # if (show is True):
+        #     data.show()
+
+
+class SparkStreamingConnector:
+
+    def getDataStreamFromTCP(self, ssc:StreamingContext, tcpAddress:str="localhost", tcpPort:str=9009):
+        dataStream = ssc.socketTextStream(tcpAddress, tcpPort)
+        return dataStream
