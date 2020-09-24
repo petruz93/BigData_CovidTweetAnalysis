@@ -1,5 +1,7 @@
 import requests
 from requests.auth import AuthBase
+import json
+from pprint import pprint
 
 from covid_tweet_analysis.config.read_config import getConfigValue
 
@@ -77,8 +79,11 @@ def setup_rules(rules, auth):
 def stream_connect(auth=bearer_token):
     stream_url = "https://api.twitter.com/labs/1/tweets/stream/filter"
     response = requests.get(stream_url, auth=auth, stream=True)
-    print(response.status_code)
-    return response#.json()
+    print('response status:', response.status_code)
+    # for response_line in response.iter_lines():
+    #     if response_line:
+    #         print(json.loads(response_line))
+    return response
 
 
 def get_tweets(params, auth=bearer_token):

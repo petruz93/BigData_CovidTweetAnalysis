@@ -1,6 +1,8 @@
 from kafka import KafkaProducer
 # from kafka.errors import KafkaError
 import requests
+import json
+from pprint import pprint
 
 from covid_tweet_analysis.twitter import twitter_api_client
 
@@ -34,21 +36,24 @@ class TweetProducer:
             twitter_api_client.setup_rules(self.tweet_rules, self.bearer_token)
 
 
-    def pushMessage(self, message):
+    def send_message(self, message):
         self.producer.send(self.topic, value=message)
 
     
-    def startPublish(self):
+    def start_publish(self):
         while True:
             print('start publish')
-            messages = twitter_api_client.stream_connect(self.bearer_token)
-            print('dopo connect')
-            for m in messages:
-                self.pushMessage(m)
+            response = twitter_api_client.stream_connect(self.bearer_token)
+            print()
+            for response_line in response.iter_lines():
+                if response_line:
+                    print(json.loads(response_line))
+                    print()
+                    self.send_message(response_line)
 
 
 if __name__ == "__main__":
     print('init producer...')
     publisher = TweetProducer('localhost', 9092, 'covid19')
     print('producer started.')
-    publisher.startPublish()
+    publisher.start_publish()
