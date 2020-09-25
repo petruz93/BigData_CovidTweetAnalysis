@@ -18,10 +18,17 @@ parser = argparse.ArgumentParser()
 # cassandra = CassandraConnector()
 
 ALL_SOURCE_NAMES=["kafka", "socket"]
+ALL_OUTPUT_NAMES=["kafka", "console", "cassandra"]
 
 parser.add_argument('--source',
                     choices=ALL_SOURCE_NAMES,
                     help="Possible data sources {}".format(ALL_SOURCE_NAMES),
+                    required=False
+)
+
+parser.add_argument('--output',
+                    choices=ALL_SOURCE_NAMES,
+                    help="Possible outputs for data {}".format(ALL_OUTPUT_NAMES),
                     required=False
 )
 
@@ -30,12 +37,14 @@ args = parser.parse_args()
 #172.18.0.2
 sparkConf = SparkConf()\
         .setAppName("TwitterStreamAppCovid")\
-        .setMaster("local[12]")\
+        .setMaster("local[8]")\
         .setAll([("spark.cassandra.connection.host", "127.0.0.1"),\
             ("spark.sql.extentions", "com.datastax.spark.connector.CassandraSparkExtensions"),\
-            ("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.0.0-beta"),\
+            ("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.0.0-beta,org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0"),\
             ("spark.sql.catalog.mycatalog", "com.datastax.spark.connector.datasource.CassandraCatalog"),\
         ])
+
+            # ("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0")        
 
 spark = SparkSession.builder\
     .config(conf=sparkConf)\
@@ -65,6 +74,7 @@ def readStream(source:str):
             .option("kafka.bootstrap.servers", "localhost:9092") \
             .option("subscribe", "covid19") \
             .load()
+        lines.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
     else:
         lines = spark \
             .readStream \
@@ -98,7 +108,17 @@ pprint(word_count)
 #     .format("console") \
 #     .start()
 
-cassandra.write_df_stream(word_count, "hashtags", "covidstream", True)
+def write_stream(output, data):
+    if(output == "cassandra"):
+        cassandra.write_df_stream(data, "hashtags", "covidstream", True)
+    else:
+        data.writeStream \
+            .format("console") \
+            .outputMode("complete") \
+            .start() \
+            .awaitTermination()
+
+write_stream(args.output, word_count)
 
 # query.awaitTermination()
 
