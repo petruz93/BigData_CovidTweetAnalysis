@@ -27,7 +27,7 @@ parser.add_argument('--source',
 )
 
 parser.add_argument('--output',
-                    choices=ALL_SOURCE_NAMES,
+                    choices=ALL_OUTPUT_NAMES,
                     help="Possible outputs for data {}".format(ALL_OUTPUT_NAMES),
                     required=False
 )
@@ -40,7 +40,7 @@ sparkConf = SparkConf()\
         .setMaster("local[8]")\
         .setAll([("spark.cassandra.connection.host", "127.0.0.1"),\
             ("spark.sql.extentions", "com.datastax.spark.connector.CassandraSparkExtensions"),\
-            ("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.0.0-beta,org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0"),\
+            ("spark.jars.packages", "com.datastax.spark:spark-cassandra-connector_2.12:3.0.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0"),\
             ("spark.sql.catalog.mycatalog", "com.datastax.spark.connector.datasource.CassandraCatalog"),\
         ])
 
@@ -88,13 +88,17 @@ lines = readStream(args.source)
 
 # Split the lines into words
 query = lines.select(
-   explode(split(lines.value, " ")
-   ).alias("hashtag"))
+   explode(split(lines.text, " ")
+   ).alias("hashtag")).filter("hashtag LIKE '#%'")
+
+# temp_view = query.createOrReplaceTempView("temp")
+
+# spark.catalog.dropTempView("temp")
 
 # .filter(lambda w: w and w=='#')   
 
 # Generate running word count
-word_count = query.groupBy("hashtag").count()    
+word_count = query.groupBy("hashtag").count().orderBy("count", ascending=False) 
 
 pprint(word_count)
 

@@ -40,7 +40,7 @@ class CassandraConnector:
             .option("confirm.truncate", True)\
             .options(table=table_name,\
                 keyspace=keyspace_name,\
-                checkpointLocation="/tmp/spark_streaming/twitter_api_streaming/word_count")\
+                checkpointLocation="/tmp/spark_streaming/twitter_api_streaming/hashtags")\
             .outputMode("complete")\
             .start()\
             .awaitTermination()
