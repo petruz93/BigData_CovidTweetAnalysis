@@ -88,7 +88,7 @@ lines = readStream(args.source)
 
 # Split the lines into words
 query = lines.select(
-   explode(split(lines.text, " ")
+   explode(split(lines.value, "[ ,.:!?]")
    ).alias("hashtag")).filter("hashtag LIKE '#%'")
 
 # temp_view = query.createOrReplaceTempView("temp")
