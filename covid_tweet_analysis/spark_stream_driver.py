@@ -14,6 +14,7 @@ from pyspark.sql.functions import split
 from pyspark.sql.functions import from_json
 from pyspark.sql.types import json
 
+from covid_tweet_analysis.config.read_config import getConfigValue
 from covid_tweet_analysis.utils.connectors import CassandraConnector as cassandra
 from covid_tweet_analysis.utils.connectors import SparkStreamingConnector
 
@@ -68,8 +69,10 @@ spark.sql("CREATE DATABASE IF NOT EXISTS mycatalog.covid_tweets WITH DBPROPERTIE
 spark.sql("CREATE TABLE IF NOT EXISTS mycatalog.covid_tweets.stream_hashtags (hashtag STRING, count BIGINT) USING cassandra PARTITIONED BY (hashtag)")
 spark.sql("CREATE TABLE IF NOT EXISTS mycatalog.covid_tweets.stream_blob_tweets (id STRING, author_id STRING, created_at STRING, text STRING) USING cassandra PARTITIONED BY (id)")
 
-twitterData = spark.read.json("/user/rastark/input/twitter.json")
-twitterDataSchema = twitterData.schema
+schemaUrl = getConfigValue("tweet", "streamTweetsSchemaUrl")
+tweetSchema = spark.read.json(schemaUrl).schema
+# twitterData = spark.read.json("/user/rastark/input/twitter.json")
+# twitterDataSchema = twitterData.schema
 # pprint(twitterData.printSchema())
 
 
@@ -98,13 +101,13 @@ lines_2 = readStream(args.source)
 # Access the tweet data
 # Query to get useful tweet fields
 query_1 = lines_1.selectExpr( "CAST(value AS STRING) as jsonData") \
-    .select(from_json("jsonData", twitterDataSchema).alias("data")) \
+    .select(from_json("jsonData", tweetSchema).alias("data")) \
     .select("data.*")
 tweet = query_1.selectExpr("data.id as id", "data.author_id as author_id", "data.created_at as created_at", "data.text as text")
 
 # Query to count hashtags
 query_2 = lines_2.selectExpr( "CAST(value AS STRING) as jsonData") \
-    .select(from_json("jsonData", twitterDataSchema).alias("data")) \
+    .select(from_json("jsonData", tweetSchema).alias("data")) \
     .select("data.*")
 
 # Hashtag_count job
