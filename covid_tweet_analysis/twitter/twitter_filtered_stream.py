@@ -101,10 +101,6 @@ def set_rules(rules, auth):
 
 def stream_connect(auth):
     response = requests.get(stream_url, auth=auth, stream=True)
-    # for response_line in response.iter_lines():
-    #     if response_line:
-    #         streamed_data = json.loads(response_line)
-    #         pprint(streamed_data)
     print(response.status_code)
     return response
 

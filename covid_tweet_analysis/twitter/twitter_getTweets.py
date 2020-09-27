@@ -7,14 +7,11 @@ from requests.auth import AuthBase
 from covid_tweet_analysis.config.read_config import getConfigValue
 
 
-# twttrAuth = TwitterAuthenticator()
-# consumer_key = twttrAuth.consumer_key  # Add your API key here
-# consumer_secret = twttrAuth.consumer_secret  # Add your API secret key here
 consumer_key = getConfigValue('twitter', 'consumerKey')
 consumer_secret = getConfigValue('twitter', 'consumerSecret')
 
 request_url = "https://api.twitter.com/labs/2/tweets"
-# params = {"ids": "1138505981460193280"} #, "tweet.fields": "created_at"}
+
 
 # Gets a bearer token
 class BearerTokenAuth(AuthBase):
@@ -54,12 +51,6 @@ def get_tweets(params, auth=None):
         auth = bearer_token()
     response = requests.get(request_url, params, auth=auth)
     return response.json()['data']
-    # result = []
-    # for response_line in response.iter_lines():
-    #     if response_line:
-    #         result.append(json.loads(response_line))
-    #         pprint(json.loads(response_line))
-    # return result
 
 
 def stream_connect(stream_url, auth=bearer_token()):
