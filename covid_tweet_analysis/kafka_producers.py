@@ -7,17 +7,7 @@ from pprint import pprint
 from covid_tweet_analysis.twitter import twitter_api_client
 
 
-# class Producer:
-
-#     def __init__(self, address: str, port: int, topic: str):
-#         self.producer = KafkaProducer(bootstrap_server=address+':'+port)
-#         self.topic = topic
-
-#     def pushMessage(self, message):
-#         self.producer.send(self.topic, message)
-
-
-class TweetProducer:
+class TwitterStreamProducer:
 
     def __init__(self, address: str, port: int, topic: str, rules=None):
         self.producer = KafkaProducer(bootstrap_servers=f'{address}:{port}')
@@ -54,6 +44,6 @@ class TweetProducer:
 
 if __name__ == "__main__":
     print('init producer...')
-    publisher = TweetProducer('localhost', 9092, 'covid19')
+    publisher = TwitterStreamProducer('localhost', 9092, 'covid19')
     print('producer started.')
     publisher.start_publish()
