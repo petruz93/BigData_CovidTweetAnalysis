@@ -11,6 +11,7 @@ class TweetStreamConsumer:
                                       , value_deserializer=lambda m: json.loads(m)
                                     )
     
+    
     def read_stream(self):
         for message in self.consumer:
             print(message.value)

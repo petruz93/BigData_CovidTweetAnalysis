@@ -14,6 +14,7 @@ class TCPConnector:
         print("Connected... Starting getting tweets.")
         return conn
 
+
 class CassandraConnector:
 
     def __init__(self):
@@ -33,17 +34,16 @@ class CassandraConnector:
 
 
     @staticmethod
-    def write_df_stream(data:DataFrame, table_name:str, keyspace_name:str, show=False):
+    def write_df_stream(data:DataFrame, table_name:str, keyspace_name:str, output_mode:str="complete", show=False, del_checkpoint=False):
         """Writes streaming @data into the CassandraDB with said table and keyspace names"""
         data.writeStream\
             .format("org.apache.spark.sql.cassandra")\
             .option("confirm.truncate", True)\
             .options(table=table_name,\
                 keyspace=keyspace_name,\
-                checkpointLocation="/tmp/spark_streaming/twitter_api_streaming/hashtags_new")\
-            .outputMode("complete")\
-            .start()\
-            .awaitTermination()
+                checkpointLocation=f"/tmp/spark_streaming/twitter_api_streaming/{table_name}")\
+            .outputMode(output_mode)\
+            .start()
         # if (show is True):
         #     data.show()
 
