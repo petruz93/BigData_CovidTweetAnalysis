@@ -93,4 +93,16 @@ def get_tweets(params, auth=bearer_token):
     """
     request_url = "https://api.twitter.com/labs/2/tweets"
     response = requests.get(request_url, params, auth=auth)
+    print('response status:', response.status_code)
+    return response.json()
+
+
+def get_tweet(tweet_id, auth=bearer_token):
+    """
+        Send a request to Twitter Api and returns a json object
+        that contains tweet details of that tweet_id.
+    """
+    request_url = "https://api.twitter.com/labs/2/tweets"
+    response = requests.get(f'{request_url}/{tweet_id}', auth=auth)
+    print('response status:', response.status_code)
     return response.json()
