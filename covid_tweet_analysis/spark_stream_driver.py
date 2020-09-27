@@ -6,10 +6,13 @@ import sys
 import requests
 from pprint import pprint
 import argparse
+from os import path
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import explode
 from pyspark.sql.functions import split
+from pyspark.sql.functions import from_json
+from pyspark.sql.types import json
 
 from covid_tweet_analysis.utils.connectors import CassandraConnector as cassandra
 from covid_tweet_analysis.utils.connectors import SparkStreamingConnector
@@ -56,15 +59,10 @@ sc = spark.sparkContext
 spark.sql("CREATE DATABASE IF NOT EXISTS mycatalog.covidstream WITH DBPROPERTIES (class='SimpleStrategy', replication_factor='1')")
 spark.sql("CREATE TABLE IF NOT EXISTS mycatalog.covidstream.hashtags (hashtag STRING, count BIGINT) USING cassandra PARTITIONED BY (hashtag)")
 
-# # Create DataFrame representing the stream of input lines from connection to localhost:9009
-# lines = spark \
-#     .readStream \
-#     .format("socket") \
-#     .option("host", "localhost") \
-#     .option("port", 9009) \
-#     .load()
+twitterData = spark.read.json("/user/rastark/input/twitter.json")
+twitterDataSchema = twitterData.schema
+# pprint(twitterData.printSchema())
 
-# Create DataFrame representing the stream of input lines from Kafka to localhost:9009
 
 def readStream(source:str):
     if(source == 'kafka'):
@@ -84,33 +82,23 @@ def readStream(source:str):
             .load()
     return lines
 
+
 lines = readStream(args.source)
 
 # Split the lines into words
-query = lines.select(
-   explode(split(lines.value, "[ ,.:!?]")
+
+query = lines.selectExpr( "CAST(value AS STRING) as jsonData") \
+    .select(from_json("jsonData", twitterDataSchema).alias("data")) \
+    .select("data.*")
+
+
+query = query.select(
+   explode(split("data.text", """[,.\[\]\{\}?!\s;\"'\\]""")
    ).alias("hashtag")).filter("hashtag LIKE '#%'")
 
-# temp_view = query.createOrReplaceTempView("temp")
-
-# spark.catalog.dropTempView("temp")
-
-# .filter(lambda w: w and w=='#')   
-
 # Generate running word count
-word_count = query.groupBy("hashtag").count().orderBy("count", ascending=False) 
+output = query.groupBy("hashtag").count().repartition(7, "hashtag").orderBy("count", ascending=False) 
 
-pprint(word_count)
-
-# # Generate running word count
-# wordCounts = words.groupBy("word").count()
-
-# # Start running the query that prints the running counts to the console
-# query = wordCounts \
-#     .writeStream \
-#     .outputMode("complete") \
-#     .format("console") \
-#     .start()
 
 def write_stream(output, data):
     if(output == "cassandra"):
@@ -118,14 +106,15 @@ def write_stream(output, data):
     else:
         data.writeStream \
             .format("console") \
+            .option("truncate", "false") \
             .outputMode("complete") \
             .start() \
             .awaitTermination()
 
-write_stream(args.output, word_count)
 
-# query.awaitTermination()
+write_stream(args.output, output)
 
+# SPARK STREAMING
 # # create the Streaming Context from the above spark context with the specified interval size seconds
 # ssc = StreamingContext(sc, 5)
 # sc.setLogLevel("ERROR")
